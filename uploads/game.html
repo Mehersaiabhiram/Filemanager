@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <style>
+        #game-board {
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-6 text-center">
+                <h1>Snake Game</h1>
+                <canvas id="game-board" width="400" height="400"></canvas>
+                <p id="score">Score: 0</p>
+                <button id="start-game" class="btn btn-primary">Start Game</button>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="game-over-modal" tabindex="-1" role="dialog" aria-labelledby="gameOverModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="gameOverModalLabel">Game Over</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p id="final-score"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <script>
+        let score = 0;
+        let snake = [];
+        let food = {};
+        let direction = 'RIGHT';
+        let speed = 100;
+        let gameOver = false;
+        let canvas = document.getElementById('game-board');
+        let ctx = canvas.getContext('2d');
+        let startGameButton = document.getElementById('start-game');
+        let scoreElement = document.getElementById('score');
+        let gameOverModal = document.getElementById('game-over-modal');
+        let finalScoreElement = document.getElementById('final-score');
+
+        startGameButton.addEventListener('click', startGame);
+
+        function startGame() {
+            snake = [{x: 200, y: 200}, {x: 190, y: 200}, {x: 180, y: 200}];
+            food = generateFood();
+            direction = 'RIGHT';
+            speed = 100;
+            gameOver = false;
+            score = 0;
+            scoreElement.textContent = 'Score: 0';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawSnake();
+            drawFood();
+            intervalId = setInterval(updateGame, speed);
+        }
+
+        function generateFood() {
+            let x = Math.floor(Math.random() * 40) * 10;
+            let y = Math.floor(Math.random() * 40) * 10;
+            return {x: x, y: y};
+        }
+
+        function drawSnake() {
+            ctx.fillStyle = 'green';
+            for (let i = 0; i < snake.length; i++) {
+                ctx.fillRect(snake[i].x, snake[i].y, 10, 10);
+            }
+        }
+
+        function drawFood() {
+            ctx.fillStyle = 'red';
+            ctx.fillRect(food.x, food.y, 10, 10);
+        }
+
+        function updateGame() {
+            if (gameOver) {
+                clearInterval(intervalId);
+                $(gameOverModal).modal('show');
+                finalScoreElement.textContent = `Your final score is: ${score}`;
+                return;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let head = snake[0];
+            let newHead;
+            switch (direction) {
+                case 'RIGHT':
+                    newHead = {x: head.x + 10, y: head.y};
+                    break;
+                case 'LEFT':
+                    newHead = {x: head.x - 10, y: head.y};
+                    break;
+                case 'UP':
+                    newHead = {x: head.x, y: head.y - 10};
+                    break;
+                case 'DOWN':
+                    newHead = {x: head.x, y: head.y + 10};
+                    break;
+            }
+            snake.unshift(newHead);
+            if (newHead.x === food.x && newHead.y === food.y) {
+                score++;
+                scoreElement.textContent = `Score: ${score}`;
+                speed -= 5;
+                if (speed < 50) {
+                    speed = 50;
+                }
+                clearInterval(intervalId);
+                intervalId = setInterval(updateGame, speed);
+                food = generateFood();
+            } else {
+                snake.pop();
+            }
+            if (newHead.x < 0 || newHead.x >= canvas.width || newHead.y < 0 || newHead.y >= canvas.height) {
+                gameOver = true;
+            }
+            for (let i = 1; i < snake.length; i++) {
+                if (newHead.x === snake[i].x && newHead.y === snake[i].y) {
+                    gameOver = true;
+                }
+            }
+            drawSnake();
+            drawFood();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' && direction !== 'LEFT') {
+                direction = 'RIGHT';
+            } else if (e.key === 'ArrowLeft' && direction !== 'RIGHT') {
+                direction = 'LEFT';
+            } else if (e.key === 'ArrowUp' && direction !== 'DOWN') {
+                direction = 'UP';
+            } else if (e.key === 'ArrowDown' && direction !== 'UP') {
+                direction = 'DOWN';
+            }
+        });
+    </script>
+</body>
+</html>
