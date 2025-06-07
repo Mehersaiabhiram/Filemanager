@@ -339,6 +339,101 @@
         .dark-mode #codes .upload-box:hover {
             background: #2e7d32;
         }
+
+        /* Editor Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow: auto;
+            position: relative;
+        }
+
+        .dark-mode .modal-content {
+            background-color: #333;
+            color: white;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .dark-mode .close-btn {
+            color: white;
+        }
+
+        .editor {
+            width: 100%;
+            height: 400px;
+            font-family: 'Courier New', monospace;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            resize: none;
+            margin-bottom: 15px;
+        }
+
+        .dark-mode .editor {
+            background-color: #222;
+            color: white;
+            border-color: #555;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .save-btn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .cancel-btn {
+            background-color: #f44336;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -410,7 +505,25 @@
         </div>
     </div>
 
+    <!-- Editor Modal -->
+    <div class="modal" id="editorModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Edit File</div>
+                <button class="close-btn" onclick="closeEditor()">&times;</button>
+            </div>
+            <textarea id="codeEditor" class="editor"></textarea>
+            <div class="modal-actions">
+                <button class="modal-btn cancel-btn" onclick="closeEditor()">Cancel</button>
+                <button class="modal-btn save-btn" onclick="saveEditedFile()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Global variables
+        let currentEditingFile = null;
+
         // Login Functionality
         function login(event) {
             event.preventDefault();
@@ -482,6 +595,7 @@
                 listItem.innerHTML = `
                     <span>${file}</span>
                     <div>
+                        ${file.match(/\.(txt|js|py|html|css)$/i) ? `<button onclick="editFile('/uploads/${file}', '${file}')" style="padding:15px;">✏️ Edit</button>` : ''}
                         ${file.match(/\.(txt|js|py|html|css)$/i) ? `<button onclick="copyCode('/uploads/${file}')" style="padding:15px;">📋 Copy Code</button>` : ''}
                         <button onclick="downloadFile('/uploads/${file}')" style="padding:15px;">⬇️ Download</button>
                         <button onclick="deleteFile('${file}')" style="padding:15px;">🗑️ Delete</button>
@@ -501,6 +615,8 @@
 
         // Delete File Functionality
         async function deleteFile(filename) {
+            if (!confirm(`Are you sure you want to delete ${filename}?`)) return;
+            
             const response = await fetch('/delete', {
                 method: 'POST',
                 headers: {
@@ -536,6 +652,51 @@
             }).catch(() => {
                 alert('Failed to copy code.');
             });
+        }
+
+        // Edit File Functionality
+        async function editFile(url, filename) {
+            currentEditingFile = { url, filename };
+            
+            const response = await fetch(url);
+            const code = await response.text();
+            
+            document.getElementById('codeEditor').value = code;
+            document.getElementById('modalTitle').textContent = `Editing: ${filename}`;
+            document.getElementById('editorModal').style.display = 'flex';
+        }
+
+        // Save Edited File Functionality
+        async function saveEditedFile() {
+            if (!currentEditingFile) return;
+            
+            const editedContent = document.getElementById('codeEditor').value;
+            
+            const response = await fetch('/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    filename: currentEditingFile.filename,
+                    content: editedContent
+                }),
+            });
+
+            const data = await response.json();
+            if (data.success) {
+                alert('File saved successfully!');
+                closeEditor();
+                loadFiles(); // Reload files to show changes
+            } else {
+                alert('Failed to save file: ' + data.message);
+            }
+        }
+
+        // Close Editor Functionality
+        function closeEditor() {
+            document.getElementById('editorModal').style.display = 'none';
+            currentEditingFile = null;
         }
 
         // Show Page Functionality
