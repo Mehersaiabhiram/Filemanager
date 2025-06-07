@@ -1,12 +1,12 @@
 from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS  # Import CORS
+from flask_cors import CORS
 import os
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 
-# Set the upload folder
-UPLOAD_FOLDER = 'uploads'
+# Set the upload folder using absolute path
+UPLOAD_FOLDER = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'uploads')
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
@@ -76,6 +76,25 @@ def delete_file():
         return jsonify({"success": True, "message": "File deleted successfully"})
     except Exception as e:
         return jsonify({"success": False, "message": f"Failed to delete file: {str(e)}"}), 500
+
+# Save edited file route
+@app.route('/save', methods=['POST'])
+def save_file():
+    data = request.get_json()
+    filename = data.get('filename')
+    content = data.get('content')
+
+    if not filename or content is None:
+        return jsonify({"success": False, "message": "Filename and content are required"}), 400
+
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+
+    try:
+        with open(file_path, 'w') as f:
+            f.write(content)
+        return jsonify({"success": True, "message": "File saved successfully"})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Failed to save file: {str(e)}"}), 500
 
 # Create folder route
 @app.route('/create-folder', methods=['POST'])
